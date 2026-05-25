@@ -44,6 +44,12 @@ func sendQuery(targetIP string, port int, msg *dns.Msg, timeout time.Duration) (
 		if parseErr := reply.Unpack(rbuf[:n]); parseErr == nil {
 			replies = append(replies, reply)
 		}
+		// After the first successful reply, shorten the deadline to 200ms to
+		// catch any additional rapid responses (e.g., multiple mDNS answerers)
+		// without blocking for the full timeout.
+		if len(replies) == 1 {
+			_ = conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+		}
 	}
 	return replies, nil
 }
