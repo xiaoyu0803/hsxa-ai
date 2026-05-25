@@ -158,10 +158,10 @@ func parseDeviceInfo(instanceName string, txtRecords []string) *result.DeviceInf
 	di.Name = name
 
 	for _, txt := range txtRecords {
-		for _, kv := range strings.Split(txt, ",") {
-			if eqIdx := strings.Index(kv, "="); eqIdx >= 0 {
-				k := strings.TrimSpace(kv[:eqIdx])
-				v := strings.TrimSpace(kv[eqIdx+1:])
+		if eqIdx := strings.Index(txt, "="); eqIdx >= 0 {
+			k := strings.TrimSpace(txt[:eqIdx])
+			v := strings.TrimSpace(txt[eqIdx+1:])
+			if k != "" {
 				di.Fields[k] = v
 			}
 		}
