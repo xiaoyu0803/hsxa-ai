@@ -28,9 +28,13 @@ func Probe(targetIP string, port uint16, timeout time.Duration) *result.HostResu
 
 	// shortTimeout is used for queries to well-known service types that the
 	// host may not support. We don't want each miss to burn the full timeout.
-	shortTimeout := timeout / 3
-	if shortTimeout < 500*time.Millisecond {
-		shortTimeout = 500 * time.Millisecond
+	// Cap at 1 second so that 18 non-responding types add at most ~18s overhead.
+	shortTimeout := timeout / 5
+	if shortTimeout < 300*time.Millisecond {
+		shortTimeout = 300 * time.Millisecond
+	}
+	if shortTimeout > time.Second {
+		shortTimeout = time.Second
 	}
 
 	// Step 1: Discover service types via _services._dns-sd._udp.local.
