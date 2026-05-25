@@ -20,7 +20,7 @@ func Assemble(hr *result.HostResult) {
 		hr.DeviceInfo = buildDeviceInfoFromServices(hr.Services)
 	}
 
-	// Normalize TXT records: split comma-joined key=value strings.
+	// Normalize TXT records: deduplicate entries.
 	for i := range hr.Services {
 		hr.Services[i].TXTRecords = normalizeTXT(hr.Services[i].TXTRecords)
 	}
@@ -49,52 +49,40 @@ func extractName(instanceName string) string {
 	return instanceName
 }
 
-// parseTXTMap converts a list of TXT strings (key=value or k=v,k=v) into a map.
+// parseTXTMap converts a list of TXT strings (each "key=value") into a map.
+// Values may contain commas; only the first '=' is treated as a separator.
 func parseTXTMap(txts []string) map[string]string {
 	m := make(map[string]string)
 	for _, txt := range txts {
-		for _, kv := range strings.Split(txt, ",") {
-			if eqIdx := strings.Index(kv, "="); eqIdx >= 0 {
-				k := strings.TrimSpace(kv[:eqIdx])
-				v := strings.TrimSpace(kv[eqIdx+1:])
-				if k != "" {
-					m[k] = v
-				}
+		if eqIdx := strings.Index(txt, "="); eqIdx >= 0 {
+			k := strings.TrimSpace(txt[:eqIdx])
+			v := strings.TrimSpace(txt[eqIdx+1:])
+			if k != "" {
+				m[k] = v
 			}
 		}
 	}
 	return m
 }
 
-// normalizeTXT expands any comma-separated key=value strings in a TXT record
-// slice into individual entries, deduplicating as it goes.
+// normalizeTXT deduplicates TXT record strings. Each string in txts should
+// already be a single key=value entry as delivered by the DNS protocol – we
+// do NOT split on commas because values themselves may legally contain commas
+// (e.g. "features=0x4A7FCFD5,0x38174FDE" or "cn=0,1,2,3").
 func normalizeTXT(txts []string) []string {
 	seen := make(map[string]struct{})
 	var out []string
 	for _, txt := range txts {
-		for _, kv := range splitTXT(txt) {
-			kv = strings.TrimSpace(kv)
-			if kv == "" {
-				continue
-			}
-			if _, ok := seen[kv]; !ok {
-				seen[kv] = struct{}{}
-				out = append(out, kv)
-			}
+		txt = strings.TrimSpace(txt)
+		if txt == "" {
+			continue
+		}
+		if _, ok := seen[txt]; !ok {
+			seen[txt] = struct{}{}
+			out = append(out, txt)
 		}
 	}
 	return out
-}
-
-// splitTXT splits a TXT record string on commas only when the comma is between
-// key=value pairs. A naive split on comma is used here; this handles the
-// common mDNS TXT format used by e.g. QNAP devices.
-func splitTXT(txt string) []string {
-	// If the string contains '=' it is likely a key=value sequence.
-	if strings.Contains(txt, "=") {
-		return strings.Split(txt, ",")
-	}
-	return []string{txt}
 }
 
 // FormatServiceLine returns a one-line summary of a ServiceRecord for display.
