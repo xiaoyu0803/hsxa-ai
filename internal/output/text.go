@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/hsxa-ai/net-probe/internal/result"
@@ -68,8 +69,8 @@ func (tw *TextWriter) Write(w io.Writer, sr *result.ScanResult) error {
 		fmt.Fprintln(w) // blank line between hosts
 	}
 
-	// Summary line
-	fmt.Fprintf(w, "Scanned %d target(s), %d open, elapsed %s\n",
+	// Summary line goes to stderr so it never pollutes stdout pipelines.
+	fmt.Fprintf(os.Stderr, "Scanned %d target(s), %d open, elapsed %s\n",
 		sr.Total, sr.OpenCount, sr.Elapsed)
 	return nil
 }

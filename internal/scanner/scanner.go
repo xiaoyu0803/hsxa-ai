@@ -67,8 +67,8 @@ func Run(cfg *config.ScanConfig) (*result.ScanResult, error) {
 			hr := runTask(t, cfg)
 
 			mu.Lock()
-			hosts = append(hosts, hr)
 			if hr.Open {
+				hosts = append(hosts, hr)
 				openCount++
 			}
 			mu.Unlock()
